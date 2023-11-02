@@ -1,5 +1,6 @@
 import pandas as pd
 import random
+import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
 
 class WO:
@@ -45,10 +46,16 @@ def simulate(production_line, storage, sequence, times):
         in_progress_pallets = sum([1 for wo in production_line.WOs.values() if wo.pieces > 0])
         in_progress_pallets_over_time.append(in_progress_pallets)
 
-    # Vypíše počet rozdělaných palet v průběhu času jako textový "graf"
-    max_pallets = max(in_progress_pallets_over_time)
-    for time, pallets in zip(times, in_progress_pallets_over_time):
-        print(f"Čas: {time}, Počet rozdělaných palet: {'.' * (pallets * 50 // max_pallets)}")
+    # Vytvoří datový rámec pandas
+    df = pd.DataFrame({
+        'Time': times,
+        'InProgressPallets': in_progress_pallets_over_time
+    })
+
+    # Vykreslí graf
+    df.plot(x='Time', y='InProgressPallets')
+    plt.show()
+
 
 # Příklad použití
 line = ProductionLine()
