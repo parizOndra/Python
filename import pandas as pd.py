@@ -73,8 +73,11 @@ line = ProductionLine()
 total_pieces = 0
 
 # Načtení dat z CSV souborů
-wo_data = pd.read_csv('wo_data.csv') # Soubor obsahuje sloupce: 'WO', 'Paletizace', 'pocet kusu'
-sequence_data = pd.read_csv('sequence_data.csv') # Soubor obsahuje sloupce: 'WO number', 'Time'
+
+read_file = pd.read_excel (r'Path where the Excel file is stored\File name.xlsx')
+read_file.to_csv (r'Path to store the CSV file\File name.csv', index = None, header=True)
+
+
 
 # Přidáme pracovní příkazy z načtených dat
 for i, row in wo_data.iterrows():
