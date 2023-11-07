@@ -72,20 +72,20 @@ def simulate(production_line, storage, sequence, times):
 line = ProductionLine()
 total_pieces = 0
 
-# Přidáme 1000 pracovních příkazů s náhodnou paletizací od 1 do 24 a náhodným počtem kusů od 25 do 100
-for i in range(1, 1001):
-    pieces = random.randint(25, 100)
+# Načtení dat z CSV souborů
+wo_data = pd.read_csv('wo_data.csv') # Soubor obsahuje sloupce: 'WO', 'Paletizace', 'pocet kusu'
+sequence_data = pd.read_csv('sequence_data.csv') # Soubor obsahuje sloupce: 'WO number', 'Time'
+
+# Přidáme pracovní příkazy z načtených dat
+for i, row in wo_data.iterrows():
+    pieces = row['pocet kusu']
     total_pieces += pieces
-    line.add_WO(f"WO{i}", random.randint(1, 24), pieces)
+    line.add_WO(row['WO'], row['Paletizace'], pieces)
 
 store = Storage()
 
 # Generujeme data pro simulaci
-sequence = []
-for i in range(1, 1001):
-    sequence.extend([f"WO{i}"] * line.WOs[f"WO{i}"].total_pieces) # Přidáme do sekvence správný počet kusů pro každé WO
-
-random.shuffle(sequence) # Zamícháme sekvenci
-times = [(datetime.now() + timedelta(minutes=x)).strftime("%Y-%m-%d %H:%M:%S") for x in range(total_pieces)] # Časové razítka pro každý kus
+sequence = sequence_data['WO number'].tolist() # Seznam pracovních příkazů
+times = sequence_data['Time'].tolist() # Časové razítka pro každý kus
 
 simulate(line, store, sequence, times)
