@@ -1,11 +1,12 @@
 import pandas as pd
-import random
+import os
 from datetime import datetime, timedelta
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy import stats
 
 class WO:
+
     def __init__(self, id, palletization, total_pieces):
         self.id = id
         self.palletization = palletization
@@ -21,6 +22,7 @@ class WO:
             self.pieces = 0
 
 class ProductionLine:
+
     def __init__(self):
         self.WOs = {}
 
@@ -32,6 +34,7 @@ class ProductionLine:
             self.WOs[WO_id].add_piece()
 
 class Storage:
+
     def __init__(self):
         self.pallets = 0
 
@@ -40,9 +43,13 @@ class Storage:
         self.pallets += 1
 
 def simulate(production_line, storage, sequence, times):
+
     in_progress_pallets_over_time = []
+
     for i, (WO_id, time) in enumerate(zip(sequence, times)):
+
         production_line.add_piece(WO_id)
+
         if production_line.WOs[WO_id].pallets > 0:
             storage.add_pallet(production_line.WOs[WO_id])
         
@@ -87,10 +94,11 @@ wo_data.to_csv (r'D:\Programming\Python\Projects\Python\WOs.csv', index = None, 
 
 # Přidáme pracovní příkazy z načtených dat
 for i, row in wo_data.iterrows():
+
     pieces = row['Wo_Count']
     total_pieces += pieces
     line.add_WO(row['workorderno'], 10, pieces)         #Zatím simulace paletizace po 10ks
-
+    
 store = Storage()
 
 # Generujeme data pro simulaci
