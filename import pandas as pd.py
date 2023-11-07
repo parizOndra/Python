@@ -65,7 +65,8 @@ def simulate(production_line, storage, sequence, times):
     df['Trend'] = slope * df['TimeInt'] + intercept
 
     # Vykreslí graf
-    df.plot(x='Time', y=['InProgressPallets'])
+    ax = df.plot(x='Time', y=['InProgressPallets'])
+    ax.grid(True)  # Přidá mřížku
     plt.show()
 
 # Příklad použití
@@ -73,8 +74,8 @@ line = ProductionLine()
 total_pieces = 0
 
 # Načtení dat z CSV souborů
-
 sequence_data = pd.read_excel (r'D:\Programming\Python\Projects\Python\Events.xlsx')
+sequence_data = sequence_data.sort_values(by='eventdted', ascending=True)
 sequence_data.to_csv (r'D:\Programming\Python\Projects\Python\Events.csv', index = None, header=True)
 
 wo_data = pd.read_excel (r'D:\Programming\Python\Projects\Python\WOs.xlsx')
