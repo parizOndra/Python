@@ -13,13 +13,25 @@ class WO:
         self.total_pieces = total_pieces
         self.pieces = 0
         self.pallets = 0
+        self.completed_pallets = []  # Seznam dokončených palet
+        self.start_time = None  # Čas začátku palety
 
-    def add_piece(self):
+    def add_piece(self, time):
+        if self.pieces == 0:
+            self.start_time = time  # Začátek nové palety
         self.pieces += 1
         self.total_pieces -= 1
         if self.pieces == self.palletization or self.total_pieces == 0:
             self.pallets += 1
             self.pieces = 0
+            self.completed_pallets.append({
+                'WO': self.id,
+                'Pieces': self.palletization,
+                'PalletID': self.pallets,
+                'StartTime': self.start_time,
+                'EndTime': time,
+                'Duration': time - self.start_time  # Doba trvání palety
+            })
 
 class ProductionLine:
 
@@ -29,9 +41,9 @@ class ProductionLine:
     def add_WO(self, id, palletization, total_pieces):
         self.WOs[id] = WO(id, palletization, total_pieces)
 
-    def add_piece(self, WO_id):
+    def add_piece(self, WO_id, time):  # Přidání času jako argumentu
         if WO_id in self.WOs:
-            self.WOs[WO_id].add_piece()
+            self.WOs[WO_id].add_piece(time)  # Předání času do metody add_piece() třídy WO
 
 class Storage:
 
@@ -48,7 +60,7 @@ def simulate(production_line, storage, sequence, times):
 
     for i, (WO_id, time) in enumerate(zip(sequence, times)):
 
-        production_line.add_piece(WO_id)
+        production_line.add_piece(WO_id, time)  # Přidání času
 
         if production_line.WOs[WO_id].pallets > 0:
             storage.add_pallet(production_line.WOs[WO_id])
@@ -76,6 +88,17 @@ def simulate(production_line, storage, sequence, times):
     ax.grid(True)  # Přidá mřížku
     plt.show()
 
+    # Na konci simulace vytvořte DataFrame z dokončených palet pro každý WO
+    completed_pallets_data = []
+    for wo in production_line.WOs.values():
+        for pallet in wo.completed_pallets:
+            completed_pallets_data.append(pallet)
+
+    completed_pallets_df = pd.DataFrame(completed_pallets_data)
+
+    # Uložte DataFrame jako CSV soubor
+    completed_pallets_df.to_csv('completed_pallets.csv', index=False)
+
 # Příklad použití
 line = ProductionLine()
 total_pieces = 0
@@ -98,7 +121,7 @@ for i, row in wo_data.iterrows():
     pieces = row['Wo_Count']
     total_pieces += pieces
     line.add_WO(row['workorderno'], 10, pieces)         #Zatím simulace paletizace po 10ks
-    
+
 store = Storage()
 
 # Generujeme data pro simulaci
