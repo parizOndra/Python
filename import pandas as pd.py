@@ -74,7 +74,11 @@ line = ProductionLine()
 total_pieces = 0
 
 # Načtení dat z CSV souborů
+start_date = '2023-10-01'
+end_date = '2023-11-10'
+
 sequence_data = pd.read_excel (r'D:\Programming\Python\Projects\Python\Events.xlsx')
+sequence_data = sequence_data[sequence_data['eventdted'].between(start_date, end_date)]
 sequence_data = sequence_data.sort_values(by='eventdted', ascending=True)
 sequence_data.to_csv (r'D:\Programming\Python\Projects\Python\Events.csv', index = None, header=True)
 
