@@ -65,7 +65,7 @@ def simulate(production_line, storage, sequence, times):
     df['Trend'] = slope * df['TimeInt'] + intercept
 
     # Vykreslí graf
-    df.plot(x='Time', y=['InProgressPallets', 'Average', 'Trend'])
+    df.plot(x='Time', y=['InProgressPallets'])
     plt.show()
 
 # Příklad použití
@@ -74,21 +74,22 @@ total_pieces = 0
 
 # Načtení dat z CSV souborů
 
-read_file = pd.read_excel (r'Path where the Excel file is stored\File name.xlsx')
-read_file.to_csv (r'Path to store the CSV file\File name.csv', index = None, header=True)
+sequence_data = pd.read_excel (r'D:\Programming\Python\Projects\Python\Events.xlsx')
+sequence_data.to_csv (r'D:\Programming\Python\Projects\Python\Events.csv', index = None, header=True)
 
-
+wo_data = pd.read_excel (r'D:\Programming\Python\Projects\Python\WOs.xlsx')
+wo_data.to_csv (r'D:\Programming\Python\Projects\Python\WOs.csv', index = None, header=True)
 
 # Přidáme pracovní příkazy z načtených dat
 for i, row in wo_data.iterrows():
-    pieces = row['pocet kusu']
+    pieces = row['Wo_Count']
     total_pieces += pieces
-    line.add_WO(row['WO'], row['Paletizace'], pieces)
+    line.add_WO(row['workorderno'], 10, pieces)         #Zatím simulace paletizace po 10ks
 
 store = Storage()
 
 # Generujeme data pro simulaci
-sequence = sequence_data['WO number'].tolist() # Seznam pracovních příkazů
-times = sequence_data['Time'].tolist() # Časové razítka pro každý kus
+sequence = sequence_data['workorderno'].tolist() # Seznam pracovních příkazů
+times = sequence_data['eventdted'].tolist() # Časové razítka pro každý kus
 
 simulate(line, store, sequence, times)
