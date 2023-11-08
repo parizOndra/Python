@@ -1,4 +1,5 @@
 import pandas as pd
+import matplotlib.pyplot as plt
 import os
 from datetime import datetime
 
@@ -50,22 +51,34 @@ class Storage:
 
 def simulate(production_line, storage, sequence, times):
     in_progress_pallets_over_time = []
+    time_stamps = []
 
     for i, (WO_id, time) in enumerate(zip(sequence, times)):
         production_line.add_piece(WO_id, time)
-
         if production_line.WOs[WO_id].pallets > 0:
             storage.add_pallet(production_line.WOs[WO_id])
-
+        
+        # Sledování počtu rozdělaných palet
         in_progress_pallets = sum([1 for wo in production_line.WOs.values() if wo.pieces > 0])
         in_progress_pallets_over_time.append(in_progress_pallets)
+        time_stamps.append(time)
+
+    # Vytvoření grafu
+    plt.figure(figsize=(10, 5))
+    plt.plot(time_stamps, in_progress_pallets_over_time, marker='o')
+    plt.title('Vývoj počtu rozdělaných palet v čase')
+    plt.xlabel('Čas')
+    plt.ylabel('Počet rozdělaných palet')
+    plt.grid(True)
+    plt.xticks(rotation=45)
+    plt.tight_layout()  # Upraví rozložení, aby se časové značky vešly
+    plt.show()
 
     completed_pallets_data = []
     for wo in production_line.WOs.values():
         completed_pallets_data.extend(wo.completed_pallets)
 
-    return completed_pallets_data
-
+    return completed_pallets_data, in_progress_pallets_over_time
 # Získání aktuálního pracovního adresáře
 current_dir = os.getcwd()
 
@@ -92,8 +105,12 @@ sequence = events_data['workorderno'].tolist()  # List of work orders from the e
 times = events_data['eventdted'].tolist()       # Timestamps for each event
 
 # Run the simulation with actual data
-completed_pallets_data = simulate(line, store, sequence, times)
+completed_pallets_data, in_progress_pallets_over_time = simulate(line, store, sequence, times)
 
-# Convert the completed pallets data to a DataFrame for better visualization
+# Uložení výsledků do CSV
 completed_pallets_df = pd.DataFrame(completed_pallets_data)
-print(completed_pallets_df.head())  # Display the first few rows of the completed pallets dataframe
+completed_pallets_df['Duration'] = completed_pallets_df['Duration'].apply(lambda x: x.total_seconds())
+output_filepath = os.path.join(current_dir, 'completed_pallets.csv')
+completed_pallets_df.to_csv(output_filepath, index=False, date_format='%Y-%m-%d %H:%M:%S.%f')
+
+print(f"Výsledky byly uloženy do souboru {output_filepath}")
