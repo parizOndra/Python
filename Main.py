@@ -2,6 +2,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import os
 from datetime import datetime
+import matplotlib.dates as mdates
 
 class WO:
     def __init__(self, id, palletization, total_pieces):
@@ -113,13 +114,21 @@ completed_pallets_df.to_csv(output_filepath, index=False, date_format='%Y-%m-%d 
 print(f"Výsledky byly uloženy do souboru {output_filepath}")
 
 plt.figure(figsize=(12, 6))
-plt.plot(in_progress_df['Time'], in_progress_df['InProgressPallets'], marker='o')
+plt.plot(in_progress_df['Time'], in_progress_df['InProgressPallets'])
 plt.title('Vývoj počtu rozdělaných palet v čase')
 plt.xlabel('Čas')
 plt.ylabel('Počet rozdělaných palet')
-plt.grid(True)
-plt.xticks(rotation=45)
-plt.tight_layout()
 
-# Save the plot as a PNG file
+# Nastaví mřížku
+plt.grid(True, linestyle='dotted', alpha=0.5)
+
+# Nastaví formát časové osy X
+plt.gca().xaxis.set_major_locator(mdates.HourLocator(interval=6))  # Interval=6 hodin
+plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%a %H:%M'))  # Formát den v týdnu Hodina:Minu
+
+# Otáčí popisky osy X
+plt.xticks(rotation=45)
+
+plt.tight_layout()
 plt.savefig('in_progress_pallets_plot.png')
+plt.show()
