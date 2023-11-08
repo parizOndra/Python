@@ -61,24 +61,21 @@ def simulate(production_line, storage, sequence, times):
         # Sledování počtu rozdělaných palet
         in_progress_pallets = sum([1 for wo in production_line.WOs.values() if wo.pieces > 0])
         in_progress_pallets_over_time.append(in_progress_pallets)
-        time_stamps.append(time)
+        time_stamps.append(time)  # Přidání časového razítka
 
-    # Vytvoření grafu
-    plt.figure(figsize=(10, 5))
-    plt.plot(time_stamps, in_progress_pallets_over_time, marker='o')
-    plt.title('Vývoj počtu rozdělaných palet v čase')
-    plt.xlabel('Čas')
-    plt.ylabel('Počet rozdělaných palet')
-    plt.grid(True)
-    plt.xticks(rotation=45)
-    plt.tight_layout()  # Upraví rozložení, aby se časové značky vešly
-    plt.show()
+    # Vytvoření DataFrame
+    in_progress_df = pd.DataFrame({
+        'Time': time_stamps,
+        'InProgressPallets': in_progress_pallets_over_time
+    })
 
     completed_pallets_data = []
     for wo in production_line.WOs.values():
         completed_pallets_data.extend(wo.completed_pallets)
 
-    return completed_pallets_data, in_progress_pallets_over_time
+    return completed_pallets_data, in_progress_df
+
+
 # Získání aktuálního pracovního adresáře
 current_dir = os.getcwd()
 
@@ -105,7 +102,7 @@ sequence = events_data['workorderno'].tolist()  # List of work orders from the e
 times = events_data['eventdted'].tolist()       # Timestamps for each event
 
 # Run the simulation with actual data
-completed_pallets_data, in_progress_pallets_over_time = simulate(line, store, sequence, times)
+completed_pallets_data, in_progress_df = simulate(line, store, sequence, times)
 
 # Uložení výsledků do CSV
 completed_pallets_df = pd.DataFrame(completed_pallets_data)
@@ -114,3 +111,15 @@ output_filepath = os.path.join(current_dir, 'completed_pallets.csv')
 completed_pallets_df.to_csv(output_filepath, index=False, date_format='%Y-%m-%d %H:%M:%S.%f')
 
 print(f"Výsledky byly uloženy do souboru {output_filepath}")
+
+plt.figure(figsize=(12, 6))
+plt.plot(in_progress_df['Time'], in_progress_df['InProgressPallets'], marker='o')
+plt.title('Vývoj počtu rozdělaných palet v čase')
+plt.xlabel('Čas')
+plt.ylabel('Počet rozdělaných palet')
+plt.grid(True)
+plt.xticks(rotation=45)
+plt.tight_layout()
+
+# Save the plot as a PNG file
+plt.savefig('in_progress_pallets_plot.png')
