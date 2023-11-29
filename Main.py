@@ -1,9 +1,9 @@
 import pandas as pd
 import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
 import os
 from datetime import datetime
-import matplotlib.dates as mdates
-
+import seaborn as sns
 
 class WO:
     def __init__(self, id, palletization, total_pieces):
@@ -29,7 +29,7 @@ class WO:
                 'PalletID': self.pallets,
                 'StartTime': self.start_time,
                 'EndTime': time,
-                'Duration': time - self.start_time  # Duration of palletization
+                'Duration': (time - self.start_time).total_seconds()  # Duration of palletization in seconds
             })
 
 class ProductionLine:
@@ -60,12 +60,10 @@ def simulate(production_line, storage, sequence, times):
         if production_line.WOs[WO_id].pallets > 0:
             storage.add_pallet(production_line.WOs[WO_id])
         
-        # Sledování počtu rozdělaných palet
         in_progress_pallets = sum([1 for wo in production_line.WOs.values() if wo.pieces > 0])
         in_progress_pallets_over_time.append(in_progress_pallets)
-        time_stamps.append(time)  # Přidání časového razítka
+        time_stamps.append(time)
 
-    # Vytvoření DataFrame
     in_progress_df = pd.DataFrame({
         'Time': time_stamps,
         'InProgressPallets': in_progress_pallets_over_time
@@ -77,6 +75,12 @@ def simulate(production_line, storage, sequence, times):
 
     return completed_pallets_data, in_progress_df
 
+# Převod sekund na formát hh:mm:ss
+def seconds_to_hms(seconds):
+    hours = int(seconds // 3600)
+    minutes = int((seconds % 3600) // 60)
+    seconds = int(seconds % 60)
+    return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
 
 # Získání aktuálního pracovního adresáře
 current_dir = os.getcwd()
@@ -100,36 +104,33 @@ for i, row in wo_data.iterrows():
     line.add_WO(row['workorderno'], palletization_standard, row['Wo_Count'])
 
 # Generate data for simulation from the events
-sequence = events_data['workorderno'].tolist()  # List of work orders from the events
-times = events_data['eventdted'].tolist()       # Timestamps for each event
+sequence = events_data['workorderno'].tolist()
+times = events_data['eventdted'].tolist()
 
 # Run the simulation with actual data
 completed_pallets_data, in_progress_df = simulate(line, store, sequence, times)
 
-# Uložení výsledků do CSV
+# Výpočet statistik
 completed_pallets_df = pd.DataFrame(completed_pallets_data)
-completed_pallets_df['Duration'] = completed_pallets_df['Duration'].apply(lambda x: x.total_seconds())
-output_filepath = os.path.join(current_dir, 'completed_pallets.csv')
-completed_pallets_df.to_csv(output_filepath, index=False, date_format='%Y-%m-%d %H:%M:%S.%f')
+average_duration = completed_pallets_df['Duration'].mean()
+lower_quantile = completed_pallets_df['Duration'].quantile(0.25)
+upper_quantile = completed_pallets_df['Duration'].quantile(0.75)
 
-print(f"Výsledky byly uloženy do souboru {output_filepath}")
+# Formátování výstupu
+average_duration_hms = seconds_to_hms(average_duration)
+lower_quantile_hms = seconds_to_hms(lower_quantile)
+upper_quantile_hms = seconds_to_hms(upper_quantile)
 
-plt.figure(figsize=(12, 6))
-plt.plot(in_progress_df['Time'], in_progress_df['InProgressPallets'])
-plt.title('Vývoj počtu rozdělaných palet v čase')
-plt.xlabel('Čas')
-plt.ylabel('Počet rozdělaných palet')
-
-# Nastaví mřížku
-plt.grid(True, linestyle='dotted', alpha=0.5)
-
-# Nastaví formát časové osy X
-plt.gca().xaxis.set_major_locator(mdates.HourLocator(interval=6))  # Interval=6 hodin
-plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%a %H:%M'))  # Formát den v týdnu Hodina:Minu
-
-# Otáčí popisky osy X
-plt.xticks(rotation=45)
-
+# Vytvoření a uložení grafu
+plt.figure(figsize=(10, 5))
+sns.barplot(x=['Average Duration', 'Lower Quantile (25%)', 'Upper Quantile (75%)'],
+            y=[average_duration, lower_quantile, upper_quantile])
+plt.title('Pallet Completion Time Statistics')
+plt.ylabel('Duration in Seconds')
+plt.xlabel('Statistic')
+plt.text(0, average_duration, average_duration_hms, ha='center', va='bottom')
+plt.text(1, lower_quantile, lower_quantile_hms, ha='center', va='bottom')
+plt.text(2, upper_quantile, upper_quantile_hms, ha='center', va='bottom')
 plt.tight_layout()
-plt.savefig('in_progress_pallets_plot.png')
+plt.savefig('pallet_completion_time_statistics.png')
 plt.show()
