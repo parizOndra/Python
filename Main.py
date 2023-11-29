@@ -121,7 +121,7 @@ average_duration_hms = seconds_to_hms(average_duration)
 lower_quantile_hms = seconds_to_hms(lower_quantile)
 upper_quantile_hms = seconds_to_hms(upper_quantile)
 
-# Vytvoření a uložení grafu
+# pallet_completion_time_statistics
 plt.figure(figsize=(10, 5))
 sns.barplot(x=['Average Duration', 'Lower Quantile (25%)', 'Upper Quantile (75%)'],
             y=[average_duration, lower_quantile, upper_quantile])
@@ -133,4 +133,34 @@ plt.text(1, lower_quantile, lower_quantile_hms, ha='center', va='bottom')
 plt.text(2, upper_quantile, upper_quantile_hms, ha='center', va='bottom')
 plt.tight_layout()
 plt.savefig('pallet_completion_time_statistics.png')
+plt.show()
+
+# Time Series Plot for In-Progress Pallets with 6-hour Grid
+plt.figure(figsize=(10, 5))
+sns.lineplot(data=in_progress_df, x='Time', y='InProgressPallets')
+plt.title('In-Progress Pallets Over Time')
+plt.ylabel('Number of In-Progress Pallets')
+plt.xlabel('Time')
+plt.gca().xaxis.set_major_locator(mdates.HourLocator(interval=6))
+plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d %H:%M'))
+plt.grid(which='major', linestyle='--', linewidth=0.5)
+plt.xticks(rotation=45)
+plt.tight_layout()
+plt.savefig('in_progress_pallets_over_time.png')
+plt.show()
+
+# Histogram of Pallet Completion Times
+plt.figure(figsize=(10, 5))
+ax = sns.histplot(completed_pallets_df['Duration'], bins=50)
+for p in ax.patches:
+    ax.annotate(f'{int(p.get_height())}', 
+                (p.get_x() + p.get_width() / 2., p.get_height()), 
+                ha = 'center', va = 'center', 
+                xytext = (0, 5), 
+                textcoords = 'offset points')
+plt.title('Histogram of Pallet Completion Times')
+plt.xlabel('Duration in Seconds')
+plt.ylabel('Frequency')
+plt.tight_layout()
+plt.savefig('pallet_completion_times_histogram.png')
 plt.show()
