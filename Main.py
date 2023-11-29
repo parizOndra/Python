@@ -17,10 +17,13 @@ class WO:
         self.start_time = None  # Start time of a pallet
 
     def add_piece(self, time):
+
         if self.pieces == 0:
             self.start_time = time  # Start of a new pallet
         self.pieces += 1
+
         self.total_pieces -= 1
+
         if self.pieces == self.palletization or self.total_pieces == 0:
             self.pallets += 1
             self.pieces = 0
@@ -32,6 +35,8 @@ class WO:
                 'EndTime': time,
                 'Duration': (time - self.start_time).total_seconds()  # Duration of palletization in seconds
             })
+            is_full = self.pieces == self.palletization
+            self.completed_pallets[-1]['IsFull'] = is_full
 
 class ProductionLine:
     def __init__(self):
@@ -47,22 +52,35 @@ class ProductionLine:
 class Storage:
     def __init__(self):
         self.pallets = 0
+        self.trucks = []
+        self.current_truck = {'id': 'Truck_A', 'start_time': None, 'end_time': None, 'pallets_loaded': 0}
 
-    def add_pallet(self, WO):
+    def add_pallet(self, WO, time):
         WO.pallets -= 1
         self.pallets += 1
+        self.current_truck['pallets_loaded'] += 1
+        if self.current_truck['pallets_loaded'] == 1:
+            self.current_truck['start_time'] = time
+        if self.current_truck['pallets_loaded'] == 20 or self.pallets == 0:
+            self.current_truck['end_time'] = time
+            self.trucks.append(self.current_truck.copy())
+            # Reset the current truck
+            self.current_truck = {'id': f'Truck_{len(self.trucks) + 1}', 'start_time': None, 'end_time': None, 'pallets_loaded': 0}
 
 def simulate(production_line, storage, sequence, times):
     in_progress_pallets_over_time = []
     time_stamps = []
-
+    
     for i, (WO_id, time) in enumerate(zip(sequence, times)):
         production_line.add_piece(WO_id, time)
+        # Kontrola, zda jsou na produkční lince palety k přidání do skladu
         if production_line.WOs[WO_id].pallets > 0:
-            storage.add_pallet(production_line.WOs[WO_id])
+            # Přidání palety do skladu s předáním aktuálního času
+            storage.add_pallet(production_line.WOs[WO_id], time)
         
         in_progress_pallets = sum([1 for wo in production_line.WOs.values() if wo.pieces > 0])
         in_progress_pallets_over_time.append(in_progress_pallets)
+        
         time_stamps.append(time)
 
     in_progress_df = pd.DataFrame({
@@ -111,6 +129,16 @@ times = events_data['eventdted'].tolist()
 # Run the simulation with actual data
 completed_pallets_data, in_progress_df = simulate(line, store, sequence, times)
 
+# Uložení informací o kamionech do DataFrame a CSV souboru
+truck_data = pd.DataFrame(store.trucks)
+truck_data['Duration'] = truck_data['end_time'] - truck_data['start_time']
+truck_data['DurationFormatted'] = truck_data['Duration'].apply(
+    lambda x: f"{int(x.total_seconds() // 3600)}:{int((x.total_seconds() % 3600) // 60)}"
+)
+
+# Uložení dat o kamionech
+truck_data.to_csv(os.path.join(current_dir, 'Trucks.csv'), index=False)
+
 # Výpočet statistik
 completed_pallets_df = pd.DataFrame(completed_pallets_data)
 average_duration = completed_pallets_df['Duration'].mean()
@@ -122,8 +150,8 @@ average_duration_hms = seconds_to_hms(average_duration)
 lower_quantile_hms = seconds_to_hms(lower_quantile)
 upper_quantile_hms = seconds_to_hms(upper_quantile)
 
-# pallet_completion_time_statistics
-plt.figure(figsize=(5, 5))
+#-------------------------------pallet_completion_time_statistics-----------------------------------------
+plt.figure(figsize=(8, 5))
 sns.barplot(x=['Average Duration', 'Lower Quantile (25%)', 'Upper Quantile (75%)'],
             y=[average_duration, lower_quantile, upper_quantile])
 plt.title('Pallet Completion Time Statistics')
@@ -136,7 +164,7 @@ plt.tight_layout()
 plt.savefig('pallet_completion_time_statistics.png')
 plt.show()
 
-# Time Series Plot for In-Progress Pallets with 6-hour Grid
+#-------------------------------Time Series Plot for In-Progress Pallets--------------------------------------
 plt.figure(figsize=(15, 5))
 sns.lineplot(data=in_progress_df, x='Time', y='InProgressPallets')
 plt.title('In-Progress Pallets Over Time')
@@ -150,7 +178,7 @@ plt.tight_layout()
 plt.savefig('in_progress_pallets_over_time.png')
 plt.show()
 
-# Histogram of Pallet Completion Times
+#-------------------------------Histogram of Pallet Completion Times------------------------------------------
 plt.figure(figsize=(20, 5))
 ax = sns.histplot(completed_pallets_df['Duration'], bins=70)
 for p in ax.patches:
