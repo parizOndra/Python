@@ -201,3 +201,33 @@ plt.xticks(bin_edges, rotation=90)
 plt.tight_layout()
 plt.savefig('pallet_completion_times_histogram.png')
 plt.show()
+
+#-------------------------------Truck visualization------------------------------------------
+# Make sure 'start_time' is a datetime column
+truck_data['start_time'] = pd.to_datetime(truck_data['start_time'])
+
+# Resampling to get the count of trucks per 3 hours
+trucks_per_3hours = truck_data.set_index('start_time').resample('3H').size()
+
+# Plotting the data
+plt.figure(figsize=(12, 6))
+trucks_per_3hours.plot(kind='bar')
+plt.title('Number of Trucks per 3 Hours')
+plt.xlabel('3-Hour Interval')
+plt.ylabel('Number of Trucks')
+plt.xticks(rotation=90)
+plt.tight_layout()
+
+# Show the plot
+plt.show()
+#-------------------------------Save CSV pallets------------------------------------------
+completed_pallets_df = pd.DataFrame(completed_pallets_data)
+# Převod StartTime a EndTime na formát HH:MM:SS
+completed_pallets_df['StartTime'] = completed_pallets_df['StartTime'].dt.strftime('%H:%M:%S')
+completed_pallets_df['EndTime'] = completed_pallets_df['EndTime'].dt.strftime('%H:%M:%S')
+
+# Převod Duration na formát HH:MM:SS
+completed_pallets_df['Duration'] = completed_pallets_df['Duration'].apply(seconds_to_hms)
+
+# Uložení do CSV
+completed_pallets_df.to_csv(os.path.join(current_dir, 'Completed_Pallets.csv'), index=False)
