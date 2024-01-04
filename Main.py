@@ -17,26 +17,32 @@ class WO:
         self.start_time = None  # Start time of a pallet
 
     def add_piece(self, time):
+        # Pokud ještě nebyl dosažen limit paletizace a zbývají kusy k dokončení
+        if self.pieces < self.palletization and self.total_pieces > 0:
+            if self.pieces == 0:
+                self.start_time = time  # Začátek nové palety
 
-        if self.pieces == 0:
-            self.start_time = time  # Start of a new pallet
-        self.pieces += 1
+            self.pieces += 1
+            self.total_pieces -= 1
 
-        self.total_pieces -= 1
+            # Kontrola, zda je paleta kompletní
+            if self.pieces == self.palletization or self.total_pieces == 0:
+                # Zaznamenání dokončené palety
+                real_pieces = min(self.pieces, self.palletization)
 
-        if self.pieces == self.palletization or self.total_pieces == 0:
-            self.pallets += 1
-            self.pieces = 0
-            self.completed_pallets.append({
-                'WO': self.id,
-                'Pieces': self.palletization,
-                'PalletID': self.pallets,
-                'StartTime': self.start_time,
-                'EndTime': time,
-                'Duration': (time - self.start_time).total_seconds()  # Duration of palletization in seconds
-            })
-            is_full = self.pieces == self.palletization
-            self.completed_pallets[-1]['IsFull'] = is_full
+                self.completed_pallets.append({
+                    'WO': self.id,
+                    'Palletization': self.palletization,
+                    'Pieces': real_pieces,
+                    'PalletID': self.pallets,
+                    'StartTime': self.start_time,
+                    'EndTime': time,
+                    'Duration': (time - self.start_time).total_seconds(),
+                    'IsFull': self.pieces == self.palletization
+                })
+                # Reset kusů pro další paletu
+                self.pieces = 0
+                self.pallets += 1  # Zvýšení počtu palet pro toto WO
 
 class ProductionLine:
     def __init__(self):
@@ -104,23 +110,27 @@ def seconds_to_hms(seconds):
 # Získání aktuálního pracovního adresáře
 current_dir = os.getcwd()
 
-# Definice relativních cest k souborům
-wo_filepath = os.path.join(current_dir, 'WOs.csv')
-events_filepath = os.path.join(current_dir, 'Events.csv')
+# Definice cest k XLSX souborům
+wo_xlsx_filepath = os.path.join(current_dir, 'WOs - Sheet1.csv')
+events_xlsx_filepath = os.path.join(current_dir, 'Events - Sheet1.csv')
 
-# Načtení dat
-wo_data = pd.read_csv(wo_filepath)
-events_data = pd.read_csv(events_filepath)
-events_data['eventdted'] = pd.to_datetime(events_data['eventdted'])
+# Načtení dat z XLSX souborů
+wo_data = pd.read_csv(wo_xlsx_filepath)
+events_data = pd.read_csv(events_xlsx_filepath)
+
+wo_data['workorderno'] = wo_data['workorderno'].astype(str)
+events_data['workorderno'] = events_data['workorderno'].astype(str)
+
+events_data['eventdted'] = pd.to_datetime(events_data['eventdted'], format='%Y-%m-%d %H:%M:%S.%f')
+events_data = events_data.sort_values(by='eventdted')
 
 # Initialize the production line and storage
 line = ProductionLine()
 store = Storage()
 
 # Add work orders to the production line with the standard palletization
-palletization_standard = 10
 for i, row in wo_data.iterrows():
-    line.add_WO(row['workorderno'], palletization_standard, row['Wo_Count'])
+    line.add_WO(row['workorderno'], row['Pcs On Pallet'], row['Wo_Count'])
 
 # Generate data for simulation from the events
 sequence = events_data['workorderno'].tolist()
@@ -223,8 +233,8 @@ plt.show()
 #-------------------------------Save CSV pallets------------------------------------------
 completed_pallets_df = pd.DataFrame(completed_pallets_data)
 # Převod StartTime a EndTime na formát HH:MM:SS
-completed_pallets_df['StartTime'] = completed_pallets_df['StartTime'].dt.strftime('%H:%M:%S')
-completed_pallets_df['EndTime'] = completed_pallets_df['EndTime'].dt.strftime('%H:%M:%S')
+completed_pallets_df['StartTime'] = completed_pallets_df['StartTime'].dt.strftime('%Y-%m-%d %H:%M:%S')
+completed_pallets_df['EndTime'] = completed_pallets_df['EndTime'].dt.strftime('%Y-%m-%d %H:%M:%S')
 
 # Převod Duration na formát HH:MM:SS
 completed_pallets_df['Duration'] = completed_pallets_df['Duration'].apply(seconds_to_hms)
